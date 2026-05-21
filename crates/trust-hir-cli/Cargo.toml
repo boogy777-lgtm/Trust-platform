@@ -1,0 +1,29 @@
+[package]
+name = "trust-hir-cli"
+description = "JSON-RPC daemon for direct HIR access"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "trust-hir-cli"
+path = "src/main.rs"
+
+[features]
+default = []
+file-watcher = ["notify"]
+
+[dependencies]
+trust-ide.workspace = true
+trust-hir.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+parking_lot.workspace = true
+smol_str.workspace = true
+text-size.workspace = true
+clap = { workspace = true }
+anyhow.workspace = true
+notify = { version = "6", optional = true }

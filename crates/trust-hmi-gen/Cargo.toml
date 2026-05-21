@@ -1,0 +1,30 @@
+[package]
+name = "trust-hmi-gen"
+description = "HMI visualization binding generator for CODESYS ST projects"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "trust-hmi-gen"
+path = "src/main.rs"
+
+[dependencies]
+trust-ide = { workspace = true }
+trust-hir = { workspace = true }
+trust-syntax = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "fs"] }
+clap = { workspace = true }
+anyhow = { workspace = true }
+smol_str = { workspace = true }
+rustc-hash = { workspace = true }
+text-size = { workspace = true }
+toml = { workspace = true }
+indexmap = { workspace = true, features = ["serde"] }
+
+[lints]
+workspace = true

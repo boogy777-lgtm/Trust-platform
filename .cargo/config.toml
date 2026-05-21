@@ -1,0 +1,6 @@
+[build]
+# rustc-wrapper = "sccache"
+rustflags = ["-C", "target-cpu=native"]
+
+[alias]
+xtask = "run -p xtask --"
