@@ -108,6 +108,24 @@ fn trust_dev_bin() -> PathBuf {
     debug_dir.join(format!("trust-dev{}", std::env::consts::EXE_SUFFIX))
 }
 
+fn python_executable() -> &'static str {
+    // Try python3 first (Linux/macOS), then python (Windows), then py (Windows launcher)
+    for candidate in ["python3", "python", "py"] {
+        if Command::new(candidate)
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
+            return candidate;
+        }
+    }
+    panic!(
+        "Python interpreter not found. Tried: python3, python, py. \
+         Please install Python 3 and ensure it is available in PATH."
+    );
+}
+
 fn run_release_gate_report(
     output_dir: &Path,
     gate_artifacts_dir: &Path,
@@ -118,7 +136,7 @@ fn run_release_gate_report(
         .join("scripts")
         .join("generate_release_gate_report.py");
     let checklist = repo_root().join("docs").join("release-gate-checklist.md");
-    let mut command = Command::new("python3");
+    let mut command = Command::new(python_executable());
     command
         .arg(script)
         .arg("--output-dir")
@@ -412,7 +430,7 @@ fn ci_flake_probe_script_emits_machine_readable_sample() {
         .join("..")
         .join("scripts")
         .join("probe_st_test_flake.py");
-    let output = Command::new("python3")
+    let output = Command::new(python_executable())
         .arg(&script)
         .arg("--test-bin")
         .arg(trust_dev_bin())
@@ -619,7 +637,7 @@ fn ci_reliability_summary_gate_returns_non_zero_on_budget_breach() {
         .join("summarize_runtime_reliability.py");
     let summary_json = report_dir.join("summary.json");
     let summary_md = report_dir.join("summary.md");
-    let output = Command::new("python3")
+    let output = Command::new(python_executable())
         .arg(script)
         .arg("--load-log")
         .arg(&load_log)

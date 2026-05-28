@@ -14,6 +14,24 @@ use crate::software_map::{
     WorkspaceEdge,
 };
 
+fn python_executable() -> &'static str {
+    // Try python3 first (Linux/macOS), then python (Windows), then py (Windows launcher)
+    for candidate in ["python3", "python", "py"] {
+        if Command::new(candidate)
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
+            return candidate;
+        }
+    }
+    panic!(
+        "Python interpreter not found. Tried: python3, python, py. \
+         Please install Python 3 and ensure it is available in PATH."
+    );
+}
+
 pub fn architecture_doctor_full_map(root: &Path) -> Result<()> {
     let policy = FullMapPolicy::load(root)?;
     let mut map = build_software_map(root, &policy)?;
@@ -2361,7 +2379,7 @@ fn check_parser_recovery_rules(map: &SoftwareMap) -> FullMapCheck {
 fn check_hir_zero_silent_bug_doctor(root: &Path) -> FullMapCheck {
     let script = Path::new("scripts/hir_zero_silent_bug_doctor.py");
     let script_path = root.join(script);
-    let command = "python3 scripts/hir_zero_silent_bug_doctor.py --fail";
+    let command = format!("{} scripts/hir_zero_silent_bug_doctor.py --fail", python_executable());
     if !script_path.is_file() {
         return FullMapCheck::fail(
             "FULLMAP-HIRZSB",
@@ -2370,14 +2388,14 @@ fn check_hir_zero_silent_bug_doctor(root: &Path) -> FullMapCheck {
         );
     }
 
-    match Command::new("python3")
+    match Command::new(python_executable())
         .arg(script)
         .arg("--fail")
         .current_dir(root)
         .output()
     {
         Ok(output) => hir_zero_silent_bug_doctor_check_from_output(
-            command,
+            &command,
             CommandCheckOutput {
                 success: output.status.success(),
                 code: output.status.code(),
@@ -4976,7 +4994,7 @@ trust-runtime -- ./crates/trust-runtime/Cargo.toml:\n\
     #[test]
     fn known_bad_hir_zero_doctor_finding_fails_full_map_check() {
         let check = hir_zero_silent_bug_doctor_check_from_output(
-            "python3 scripts/hir_zero_silent_bug_doctor.py --fail",
+            &format!("{} scripts/hir_zero_silent_bug_doctor.py --fail", python_executable()),
             CommandCheckOutput {
                 success: false,
                 code: Some(1),
@@ -4997,7 +5015,7 @@ trust-runtime -- ./crates/trust-runtime/Cargo.toml:\n\
     #[test]
     fn hir_zero_doctor_no_findings_passes_full_map_check() {
         let check = hir_zero_silent_bug_doctor_check_from_output(
-            "python3 scripts/hir_zero_silent_bug_doctor.py --fail",
+            &format!("{} scripts/hir_zero_silent_bug_doctor.py --fail", python_executable()),
             CommandCheckOutput {
                 success: true,
                 code: Some(0),
