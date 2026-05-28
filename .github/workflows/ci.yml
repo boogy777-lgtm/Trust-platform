@@ -55,6 +55,8 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Ensure scripts are executable
+        run: find scripts -name "*.sh" -exec chmod +x {} +
       - name: Guard Windows path hygiene in tests
         run: ./scripts/check_test_path_hygiene.sh
       - name: Install Windows cross-compiler for runtime warning gate
