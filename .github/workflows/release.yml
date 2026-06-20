@@ -221,7 +221,7 @@ jobs:
 
   publish:
     name: Publish
-    needs: [build, runtime-vm-validation]
+    needs: [build]
     runs-on: ubuntu-latest
     env:
       VSCE_PAT: ${{ secrets.VSCE_PAT }}
