@@ -692,8 +692,8 @@ evict_to_percent = 75
             message: "error".to_string(),
             ..Diagnostic::default()
         };
-        assert!(state.should_publish_diagnostics(&a, &[diagnostic.clone()]));
-        assert!(!state.should_publish_diagnostics(&a, &[diagnostic.clone()]));
+        assert!(state.should_publish_diagnostics(&a, std::slice::from_ref(&diagnostic)));
+        assert!(!state.should_publish_diagnostics(&a, std::slice::from_ref(&diagnostic)));
         assert!(state.should_publish_diagnostics(&b, &[diagnostic]));
         assert!(state.should_publish_diagnostics(&a, &[]));
         assert!(!state.should_publish_diagnostics(&a, &[]));
