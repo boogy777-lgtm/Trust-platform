@@ -41,6 +41,10 @@ pub(crate) async fn publish_diagnostics(
     let diagnostic_hash = hash_diagnostics(&diagnostics);
     let _ = state.store_diagnostics(uri.clone(), content_hash, diagnostic_hash);
 
+    if !state.should_publish_diagnostics(uri, &diagnostics) {
+        return;
+    }
+
     client
         .publish_diagnostics(uri.clone(), diagnostics, None)
         .await;
