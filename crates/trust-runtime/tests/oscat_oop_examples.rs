@@ -283,10 +283,7 @@ fn run_example_st_tests_at(project: &Path) -> Result<(), String> {
     let mut next_progress = EXAMPLE_TEST_PROGRESS_INTERVAL;
     eprintln!("{}", example_child_started_line(child_id, project));
     loop {
-        if let Some(status) = child
-            .try_wait()
-            .expect("poll trust-dev example test")
-        {
+        if let Some(status) = child.try_wait().expect("poll trust-dev example test") {
             let stdout = stdout_reader.join().expect("stdout reader");
             let stderr = stderr_reader.join().expect("stderr reader");
             let elapsed = started.elapsed();
