@@ -250,8 +250,10 @@ impl SymbolCollector<'_> {
                                         *candidate,
                                         &parsed.segments,
                                     ) {
-                                        if wildcard_vars.contains(&target.symbol_id) {
-                                            configured.insert(target.symbol_id);
+                                        let configured_id =
+                                            target.field_symbol_id.unwrap_or(target.symbol_id);
+                                        if wildcard_vars.contains(&configured_id) {
+                                            configured.insert(configured_id);
                                         }
                                     }
                                 }
@@ -272,8 +274,11 @@ impl SymbolCollector<'_> {
                         access_path.text_range(),
                         "VAR_CONFIG must provide a fully specified direct address",
                     );
-                } else if wildcard_vars.contains(&target.symbol_id) {
-                    configured.insert(target.symbol_id);
+                } else {
+                    let configured_id = target.field_symbol_id.unwrap_or(target.symbol_id);
+                    if wildcard_vars.contains(&configured_id) {
+                        configured.insert(configured_id);
+                    }
                 }
             }
         }

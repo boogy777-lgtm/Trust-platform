@@ -117,6 +117,7 @@ pub(super) fn update_document(state: &ServerState, uri: &Url, version: i32, cont
 }
 
 pub(super) fn close_document(state: &ServerState, uri: &Url) {
+    state.published_diagnostics.write().remove(uri);
     if let Some(doc) = state.documents.write().get_mut(uri) {
         doc.is_open = false;
     }
@@ -128,6 +129,7 @@ pub(super) fn remove_document(state: &ServerState, uri: &Url) -> Option<FileId> 
     let doc = state.documents.write().remove(uri)?;
     state.semantic_tokens.write().remove(uri);
     state.diagnostics.write().remove(uri);
+    state.published_diagnostics.write().remove(uri);
     let mut project = state.project.write();
     project.remove_source(&key);
     Some(doc.file_id)
@@ -138,6 +140,7 @@ pub(super) fn rename_document(state: &ServerState, old_uri: &Url, new_uri: &Url)
     let mut doc = docs.remove(old_uri)?;
     state.semantic_tokens.write().remove(old_uri);
     state.diagnostics.write().remove(old_uri);
+    state.published_diagnostics.write().remove(old_uri);
 
     let old_key = source_key_for_uri(old_uri);
     let new_key = source_key_for_uri(new_uri);

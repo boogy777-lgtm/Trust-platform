@@ -61,7 +61,6 @@ crate_trust_ide --> crate_trust_hir : direct dep
 crate_trust_ide --> crate_trust_syntax : direct dep
 crate_trust_lsp --> crate_trust_hir : direct dep
 crate_trust_lsp --> crate_trust_ide : direct dep
-crate_trust_lsp -[#Red,thickness=2]-> crate_trust_runtime : direct dep / needs boundary policy
 crate_trust_lsp --> crate_trust_syntax : direct dep
 crate_trust_plcopen --> crate_trust_syntax : direct dep
 crate_trust_runtime --> crate_trust_hir : direct dep

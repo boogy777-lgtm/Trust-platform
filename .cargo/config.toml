@@ -1,6 +1,7 @@
 [build]
 # rustc-wrapper = "sccache"
-rustflags = ["-C", "target-cpu=native"]
+# Keep build artifacts portable across machines sharing a cache. Host-specific
+# builds can opt in via RUSTFLAGS (see scripts/runtime_host_codegen.sh).
 
 [alias]
 xtask = "run -p xtask --"

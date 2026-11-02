@@ -679,13 +679,13 @@ impl SymbolTable {
 
     /// Returns the base type name for a symbol, if any.
     #[must_use]
-    pub fn extends_name(&self, owner: SymbolId) -> Option<&SmolStr> {
+    pub(crate) fn extends_name(&self, owner: SymbolId) -> Option<&SmolStr> {
         self.extends.get(&owner).map(|reference| &reference.name)
     }
 
     /// Returns implemented interface names for a symbol, if any.
     #[must_use]
-    pub fn implements_names(&self, owner: SymbolId) -> Option<Vec<&SmolStr>> {
+    pub(crate) fn implements_names(&self, owner: SymbolId) -> Option<Vec<&SmolStr>> {
         self.implements.get(&owner).map(|references| {
             references
                 .iter()

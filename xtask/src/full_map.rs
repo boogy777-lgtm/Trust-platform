@@ -2379,7 +2379,10 @@ fn check_parser_recovery_rules(map: &SoftwareMap) -> FullMapCheck {
 fn check_hir_zero_silent_bug_doctor(root: &Path) -> FullMapCheck {
     let script = Path::new("scripts/hir_zero_silent_bug_doctor.py");
     let script_path = root.join(script);
-    let command = format!("{} scripts/hir_zero_silent_bug_doctor.py --fail", python_executable());
+    let command = format!(
+        "{} scripts/hir_zero_silent_bug_doctor.py --fail",
+        python_executable()
+    );
     if !script_path.is_file() {
         return FullMapCheck::fail(
             "FULLMAP-HIRZSB",
@@ -4994,7 +4997,10 @@ trust-runtime -- ./crates/trust-runtime/Cargo.toml:\n\
     #[test]
     fn known_bad_hir_zero_doctor_finding_fails_full_map_check() {
         let check = hir_zero_silent_bug_doctor_check_from_output(
-            &format!("{} scripts/hir_zero_silent_bug_doctor.py --fail", python_executable()),
+            &format!(
+                "{} scripts/hir_zero_silent_bug_doctor.py --fail",
+                python_executable()
+            ),
             CommandCheckOutput {
                 success: false,
                 code: Some(1),
@@ -5015,7 +5021,10 @@ trust-runtime -- ./crates/trust-runtime/Cargo.toml:\n\
     #[test]
     fn hir_zero_doctor_no_findings_passes_full_map_check() {
         let check = hir_zero_silent_bug_doctor_check_from_output(
-            &format!("{} scripts/hir_zero_silent_bug_doctor.py --fail", python_executable()),
+            &format!(
+                "{} scripts/hir_zero_silent_bug_doctor.py --fail",
+                python_executable()
+            ),
             CommandCheckOutput {
                 success: true,
                 code: Some(0),

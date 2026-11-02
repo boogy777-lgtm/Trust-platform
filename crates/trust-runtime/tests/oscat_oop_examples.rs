@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
@@ -262,24 +263,34 @@ fn run_example_st_tests_at(project: &Path) -> Result<(), String> {
         .spawn()
         .expect("run trust-dev test");
 
+    // Drain both pipes while the child is running: waiting before reading can
+    // deadlock when a diagnostic-heavy project fills the OS pipe buffer.
+    let mut stdout = child.stdout.take().expect("child stdout");
+    let mut stderr = child.stderr.take().expect("child stderr");
+    let stdout_reader = thread::spawn(move || {
+        let mut bytes = Vec::new();
+        stdout.read_to_end(&mut bytes).expect("read child stdout");
+        bytes
+    });
+    let stderr_reader = thread::spawn(move || {
+        let mut bytes = Vec::new();
+        stderr.read_to_end(&mut bytes).expect("read child stderr");
+        bytes
+    });
+
     let started = Instant::now();
     let child_id = child.id();
     let mut next_progress = EXAMPLE_TEST_PROGRESS_INTERVAL;
     eprintln!("{}", example_child_started_line(child_id, project));
     loop {
-        if child
-            .try_wait()
-            .expect("poll trust-dev example test")
-            .is_some()
-        {
-            let output = child
-                .wait_with_output()
-                .expect("collect trust-dev example test output");
+        if let Some(status) = child.try_wait().expect("poll trust-dev example test") {
+            let stdout = stdout_reader.join().expect("stdout reader");
+            let stderr = stderr_reader.join().expect("stderr reader");
             let elapsed = started.elapsed();
-            if output.status.success() {
+            if status.success() {
                 eprintln!(
                     "[oscat examples] child pid={child_id} completed status={} elapsed={}ms project={}",
-                    output.status,
+                    status,
                     elapsed.as_millis(),
                     project.display()
                 );
@@ -291,9 +302,9 @@ fn run_example_st_tests_at(project: &Path) -> Result<(), String> {
                 project.display(),
                 child_id,
                 elapsed.as_millis(),
-                output.status,
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
+                status,
+                String::from_utf8_lossy(&stdout),
+                String::from_utf8_lossy(&stderr)
             ));
         }
 
@@ -302,14 +313,14 @@ fn run_example_st_tests_at(project: &Path) -> Result<(), String> {
             let timeout_line = example_child_timeout_line(child_id, project, elapsed);
             eprintln!("{timeout_line}");
             let _ = child.kill();
-            let output = child
-                .wait_with_output()
-                .expect("collect timed-out trust-runtime example test output");
+            let status = child.wait().expect("wait for timed-out child");
+            let stdout = stdout_reader.join().expect("stdout reader");
+            let stderr = stderr_reader.join().expect("stderr reader");
             return Err(format!(
                 "{timeout_line}\nstatus: {}\nstdout:\n{}\nstderr:\n{}",
-                output.status,
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
+                status,
+                String::from_utf8_lossy(&stdout),
+                String::from_utf8_lossy(&stderr)
             ));
         }
 

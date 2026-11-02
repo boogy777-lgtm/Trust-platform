@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{watch, Semaphore};
-use tower_lsp::lsp_types::{SemanticToken, Url};
+use tower_lsp::lsp_types::{Diagnostic, SemanticToken, Url};
 
 use crate::config::ProjectConfig;
 use crate::library_docs::library_doc_map;
@@ -111,6 +111,8 @@ pub struct ServerState {
     semantic_tokens: RwLock<FxHashMap<Url, SemanticTokensCache>>,
     /// Cached diagnostics for pull requests.
     diagnostics: RwLock<FxHashMap<Url, DiagnosticCache>>,
+    /// Last diagnostic payload sent to a push client, independent of pull result IDs.
+    published_diagnostics: RwLock<FxHashMap<Url, Vec<Diagnostic>>>,
     /// Monotonic ID for semantic token result IDs.
     semantic_tokens_id: AtomicU64,
     /// Monotonic ID for diagnostic result IDs.
@@ -156,6 +158,7 @@ impl ServerState {
             documents: RwLock::new(FxHashMap::default()),
             semantic_tokens: RwLock::new(FxHashMap::default()),
             diagnostics: RwLock::new(FxHashMap::default()),
+            published_diagnostics: RwLock::new(FxHashMap::default()),
             semantic_tokens_id: AtomicU64::new(1),
             diagnostic_id: AtomicU64::new(1),
             doc_access_counter: AtomicU64::new(1),
@@ -430,6 +433,18 @@ impl ServerState {
         cache::store_diagnostics(self, uri, content_hash, diagnostic_hash)
     }
 
+    pub(crate) fn should_publish_diagnostics(&self, uri: &Url, diagnostics: &[Diagnostic]) -> bool {
+        let mut published = self.published_diagnostics.write();
+        if published
+            .get(uri)
+            .is_some_and(|previous| previous == diagnostics)
+        {
+            return false;
+        }
+        published.insert(uri.clone(), diagnostics.to_vec());
+        true
+    }
+
     #[cfg(test)]
     pub fn diagnostic_result_id(&self, uri: &Url) -> Option<String> {
         self.diagnostics
@@ -666,6 +681,24 @@ evict_to_percent = 75
             first, third,
             "changed diagnostics should emit a new result id"
         );
+    }
+
+    #[test]
+    fn push_diagnostics_suppresses_only_identical_payloads_and_resets_on_close() {
+        let state = ServerState::new();
+        let a = Url::parse("file:///a.st").expect("URI");
+        let b = Url::parse("file:///b.st").expect("URI");
+        let diagnostic = Diagnostic {
+            message: "error".to_string(),
+            ..Diagnostic::default()
+        };
+        assert!(state.should_publish_diagnostics(&a, std::slice::from_ref(&diagnostic)));
+        assert!(!state.should_publish_diagnostics(&a, std::slice::from_ref(&diagnostic)));
+        assert!(state.should_publish_diagnostics(&b, &[diagnostic]));
+        assert!(state.should_publish_diagnostics(&a, &[]));
+        assert!(!state.should_publish_diagnostics(&a, &[]));
+        state.close_document(&a);
+        assert!(state.should_publish_diagnostics(&a, &[]));
     }
 
     #[test]

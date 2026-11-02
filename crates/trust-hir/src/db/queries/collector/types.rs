@@ -66,8 +66,10 @@ impl SymbolCollector<'_> {
         self.parent_stack.push(type_symbol_id);
 
         let type_id = match type_def.kind() {
-            SyntaxKind::StructDef => self.collect_struct_type(type_def, qualified_name.clone()),
-            SyntaxKind::UnionDef => self.collect_union_type(type_def, qualified_name.clone()),
+            SyntaxKind::StructDef => {
+                self.collect_struct_type(type_def, qualified_name.clone(), true)
+            }
+            SyntaxKind::UnionDef => self.collect_union_type(type_def, qualified_name.clone(), true),
             SyntaxKind::EnumDef => self.collect_enum_type(type_def, qualified_name.clone()),
             SyntaxKind::ArrayType => {
                 let target_type = self.collect_array_type(type_def);
@@ -261,8 +263,8 @@ impl SymbolCollector<'_> {
         qualified_name: SmolStr,
     ) -> TypeId {
         match type_def.kind() {
-            SyntaxKind::StructDef => self.collect_struct_type(type_def, qualified_name),
-            SyntaxKind::UnionDef => self.collect_union_type(type_def, qualified_name),
+            SyntaxKind::StructDef => self.collect_struct_type(type_def, qualified_name, false),
+            SyntaxKind::UnionDef => self.collect_union_type(type_def, qualified_name, false),
             SyntaxKind::EnumDef => self.collect_imported_enum_type(type_def, qualified_name),
             SyntaxKind::ArrayType => {
                 let target_type = self.collect_array_type(type_def);
@@ -290,7 +292,7 @@ impl SymbolCollector<'_> {
         }
     }
 
-    pub(super) fn collect_struct_type(&mut self, node: &SyntaxNode, name: SmolStr) -> TypeId {
+    fn collect_struct_type(&mut self, node: &SyntaxNode, name: SmolStr, local: bool) -> TypeId {
         let mut fields = Vec::new();
 
         for var_decl in node.children().filter(|n| n.kind() == SyntaxKind::VarDecl) {
@@ -319,7 +321,7 @@ impl SymbolCollector<'_> {
                 // Create Symbol for struct field only when collecting a local TYPE declaration.
                 // Use add_symbol_raw to avoid adding the field into the current scope
                 // (struct fields are looked up via the type table, not scope resolution).
-                if self.current_parent().is_some() {
+                if local {
                     let mut field_sym = Symbol::new(
                         SymbolId::UNKNOWN,
                         field_name,
@@ -337,7 +339,7 @@ impl SymbolCollector<'_> {
         self.table.register_struct_type(name, fields)
     }
 
-    pub(super) fn collect_union_type(&mut self, node: &SyntaxNode, name: SmolStr) -> TypeId {
+    fn collect_union_type(&mut self, node: &SyntaxNode, name: SmolStr, local: bool) -> TypeId {
         let mut variants = Vec::new();
 
         for var_decl in node.children().filter(|n| n.kind() == SyntaxKind::VarDecl) {
@@ -366,7 +368,7 @@ impl SymbolCollector<'_> {
                 // Create Symbol for union variant (field) only when collecting a local TYPE declaration.
                 // Use add_symbol_raw to avoid adding the field into the current scope
                 // (union variants are looked up via the type table, not scope resolution).
-                if self.current_parent().is_some() {
+                if local {
                     let mut field_sym = Symbol::new(
                         SymbolId::UNKNOWN,
                         field_name,

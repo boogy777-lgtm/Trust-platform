@@ -536,7 +536,8 @@ pub fn handle_index(state: &DaemonState, params: Value) -> Result<Value, RpcErro
                     let from_id = format!("st:{}:{}", path_str, symbol.name);
                     let line = offset_to_line_col(&content, symbol.range.start().into()).0;
 
-                    if let Some(extends_name) = symbols.extends_name(symbol.id) {
+                    if let Some(reference) = symbols.extends_reference(symbol.id) {
+                        let extends_name = reference.name().display();
                         relationships.push(json!({
                             "id": format!("st:rel:{}:{}:{}:EXTENDS:{}", path_str, symbol.name, extends_name, line),
                             "from": from_id.clone(),
@@ -548,8 +549,9 @@ pub fn handle_index(state: &DaemonState, params: Value) -> Result<Value, RpcErro
                         }));
                     }
 
-                    if let Some(iface_names) = symbols.implements_names(symbol.id) {
-                        for iface_name in iface_names {
+                    {
+                        for reference in symbols.implements_references(symbol.id) {
+                            let iface_name = reference.name().display();
                             relationships.push(json!({
                                 "id": format!("st:rel:{}:{}:{}:IMPLEMENTS:{}", path_str, symbol.name, iface_name, line),
                                 "from": from_id.clone(),
