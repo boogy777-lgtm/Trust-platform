@@ -603,6 +603,43 @@ END_PROGRAM
 }
 
 #[test]
+fn test_imported_struct_fields_do_not_collide_with_pou_members() {
+    for (kind, end) in [("STRUCT", "END_STRUCT"), ("UNION", "END_UNION")] {
+        let mut db = Database::new();
+        db.set_source_text(
+            FileId(0),
+            format!("TYPE Status : {kind} Ready : BOOL; {end} END_TYPE"),
+        );
+        db.set_source_text(
+            FileId(1),
+            r#"
+FUNCTION_BLOCK Device
+VAR value : Status; END_VAR
+PUBLIC PROPERTY Ready : BOOL
+GET
+    Ready := value.Ready;
+END_GET
+END_PROPERTY
+END_FUNCTION_BLOCK
+"#
+            .to_string(),
+        );
+        db.set_source_text(FileId(2), "PROGRAM Main END_PROGRAM".to_string());
+
+        let duplicates = db
+            .diagnostics(FileId(2))
+            .iter()
+            .filter(|diagnostic| diagnostic.code == DiagnosticCode::DuplicateDeclaration)
+            .map(|diagnostic| diagnostic.message.clone())
+            .collect::<Vec<_>>();
+        assert!(
+            duplicates.is_empty(),
+            "unexpected {kind} duplicates: {duplicates:?}"
+        );
+    }
+}
+
+#[test]
 fn test_var_config_type_mismatch() {
     check_has_error(
         r#"
