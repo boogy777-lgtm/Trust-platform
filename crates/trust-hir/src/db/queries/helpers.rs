@@ -525,6 +525,7 @@ pub(in crate::db) fn parse_access_path(node: &SyntaxNode) -> Option<ParsedAccess
 pub(in crate::db) struct AccessTarget {
     pub(in crate::db) symbol_id: SymbolId,
     pub(in crate::db) leaf_type: TypeId,
+    pub(in crate::db) field_symbol_id: Option<SymbolId>,
 }
 
 pub(in crate::db) fn program_config_instance_and_type(
@@ -687,6 +688,7 @@ pub(in crate::db) fn resolve_access_path_target_from_symbol(
 ) -> Option<AccessTarget> {
     let mut current_symbol = root_symbol;
     let mut current_type = symbols.resolve_alias_type(symbols.get(current_symbol)?.type_id);
+    let mut field_symbol_id = None;
 
     for segment in segments {
         match segment {
@@ -722,6 +724,8 @@ pub(in crate::db) fn resolve_access_path_target_from_symbol(
                             .iter()
                             .find(|field| field.name.eq_ignore_ascii_case(name.as_str()))
                             .map(|field| field.type_id)?;
+                        field_symbol_id =
+                            access_path_field_symbol(symbols, resolved, name.as_str());
                         current_type = field_type;
                     }
                     Some(Type::Union { variants, .. }) => {
@@ -729,6 +733,8 @@ pub(in crate::db) fn resolve_access_path_target_from_symbol(
                             .iter()
                             .find(|variant| variant.name.eq_ignore_ascii_case(name.as_str()))
                             .map(|variant| variant.type_id)?;
+                        field_symbol_id =
+                            access_path_field_symbol(symbols, resolved, name.as_str());
                         current_type = field_type;
                     }
                     Some(
@@ -737,6 +743,7 @@ pub(in crate::db) fn resolve_access_path_target_from_symbol(
                         let member =
                             symbols.resolve_member_symbol_in_type(current_type, name.as_str())?;
                         current_symbol = member;
+                        field_symbol_id = None;
                         current_type = symbols.resolve_alias_type(symbols.get(member)?.type_id);
                     }
                     _ => return None,
@@ -748,5 +755,22 @@ pub(in crate::db) fn resolve_access_path_target_from_symbol(
     Some(AccessTarget {
         symbol_id: current_symbol,
         leaf_type: current_type,
+        field_symbol_id,
+    })
+}
+
+fn access_path_field_symbol(
+    symbols: &SymbolTable,
+    type_id: TypeId,
+    name: &str,
+) -> Option<SymbolId> {
+    let owner = symbols
+        .iter()
+        .find(|symbol| matches!(symbol.kind, SymbolKind::Type) && symbol.type_id == type_id)?;
+    symbols.iter().find_map(|symbol| {
+        (symbol.parent == Some(owner.id)
+            && matches!(symbol.kind, SymbolKind::Field { .. })
+            && symbol.name.eq_ignore_ascii_case(name))
+        .then_some(symbol.id)
     })
 }
